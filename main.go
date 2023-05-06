@@ -43,7 +43,7 @@ func main() {
 }
 
 func run() error {
-	rl := ratelimit.New(30, ratelimit.Per(time.Minute))
+	rl := ratelimit.New(5, ratelimit.Per(time.Second))
 	tc, err := twitter.New(c.RapidapiKey, twitter.WithRateLimit(rl))
 	if err != nil {
 		return fmt.Errorf("twitter client: %w", err)
@@ -55,14 +55,15 @@ func run() error {
 	}
 
 	userId := user.UserId
-	println(userId)
 
-	following, err := tc.GetUserFollowing(userId)
+	tweets, err := tc.GetUserTweets(userId)
 	if err != nil {
-		return fmt.Errorf("get user following: %w", err)
+		return fmt.Errorf("get user tweets: %w", err)
 	}
 
-	fmt.Printf("following: %v\n", following)
+	for _, tweet := range tweets {
+		fmt.Printf("%+v\n", tweet)
+	}
 
 	return nil
 }
