@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/JeremyLoy/config"
 	twitter "github.com/bjornpagen/rapidapi/twitter154"
+	"go.uber.org/ratelimit"
 )
 
 type Config struct {
@@ -41,7 +43,8 @@ func main() {
 }
 
 func run() error {
-	tc, err := twitter.New(c.RapidapiKey)
+	rl := ratelimit.New(30, ratelimit.Per(time.Minute))
+	tc, err := twitter.New(c.RapidapiKey, twitter.WithRateLimit(rl))
 	if err != nil {
 		return fmt.Errorf("twitter client: %w", err)
 	}
@@ -51,7 +54,15 @@ func run() error {
 		return fmt.Errorf("get user details: %w", err)
 	}
 
-	fmt.Printf("user: %+v\n", user)
+	userId := user.UserId
+	println(userId)
+
+	following, err := tc.GetUserFollowing(userId)
+	if err != nil {
+		return fmt.Errorf("get user following: %w", err)
+	}
+
+	fmt.Printf("following: %v\n", following)
 
 	return nil
 }
