@@ -11,28 +11,22 @@ import (
 )
 
 const addFollow = `-- name: AddFollow :exec
-INSERT INTO follow (
-	user_id,
-	follower_id,
-	timestamp
-) VALUES (
-	?, ?, ?
-)
+INSERT OR REPLACE INTO follow (user_id, follower_id)
+VALUES (?, ?)
 `
 
 type AddFollowParams struct {
 	UserID     string
 	FollowerID string
-	Timestamp  int64
 }
 
 func (q *Queries) AddFollow(ctx context.Context, arg AddFollowParams) error {
-	_, err := q.db.ExecContext(ctx, addFollow, arg.UserID, arg.FollowerID, arg.Timestamp)
+	_, err := q.db.ExecContext(ctx, addFollow, arg.UserID, arg.FollowerID)
 	return err
 }
 
 const addTweet = `-- name: AddTweet :exec
-INSERT INTO tweets (tweet_id, user_id)
+INSERT OR IGNORE INTO tweets (tweet_id, user_id)
 VALUES (?, ?)
 `
 
@@ -48,10 +42,10 @@ func (q *Queries) AddTweet(ctx context.Context, arg AddTweetParams) error {
 
 const addTweetHistory = `-- name: AddTweetHistory :one
 INSERT INTO tweet_history (
-	creation_date,
 	tweet_id,
-	text,
 	user_id,
+	creation_date,
+	text,
 	language,
 	favorite_count,
 	retweet_count,
@@ -63,16 +57,15 @@ INSERT INTO tweet_history (
 	video_view_count,
 	expanded_url,
 	conversation_id
-) VALUES (
-	?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-) RETURNING id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id
 `
 
 type AddTweetHistoryParams struct {
-	CreationDate   string
 	TweetID        string
-	Text           sql.NullString
 	UserID         string
+	CreationDate   string
+	Text           sql.NullString
 	Language       sql.NullString
 	FavoriteCount  sql.NullInt64
 	RetweetCount   sql.NullInt64
@@ -88,10 +81,10 @@ type AddTweetHistoryParams struct {
 
 func (q *Queries) AddTweetHistory(ctx context.Context, arg AddTweetHistoryParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, addTweetHistory,
-		arg.CreationDate,
 		arg.TweetID,
-		arg.Text,
 		arg.UserID,
+		arg.CreationDate,
+		arg.Text,
 		arg.Language,
 		arg.FavoriteCount,
 		arg.RetweetCount,
@@ -110,18 +103,23 @@ func (q *Queries) AddTweetHistory(ctx context.Context, arg AddTweetHistoryParams
 }
 
 const addUser = `-- name: AddUser :exec
-INSERT INTO users (user_id)
-VALUES (?)
+INSERT OR IGNORE INTO users (user_id, creation_date, timestamp)
+VALUES (?, ?, ?)
 `
 
-func (q *Queries) AddUser(ctx context.Context, userID string) error {
-	_, err := q.db.ExecContext(ctx, addUser, userID)
+type AddUserParams struct {
+	UserID       string
+	CreationDate string
+	Timestamp    int64
+}
+
+func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) error {
+	_, err := q.db.ExecContext(ctx, addUser, arg.UserID, arg.CreationDate, arg.Timestamp)
 	return err
 }
 
 const addUserHistory = `-- name: AddUserHistory :one
 INSERT INTO user_history (
-	creation_date,
 	user_id,
 	username,
 	name,
@@ -138,17 +136,14 @@ INSERT INTO user_history (
 	external_url,
 	number_of_tweets,
 	bot,
-	timestamp,
 	has_nft_avatar,
 	default_profile,
 	default_image
-) VALUES (
-	?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-) RETURNING id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id
 `
 
 type AddUserHistoryParams struct {
-	CreationDate     string
 	UserID           string
 	Username         string
 	Name             string
@@ -165,7 +160,6 @@ type AddUserHistoryParams struct {
 	ExternalUrl      string
 	NumberOfTweets   int64
 	Bot              int64
-	Timestamp        int64
 	HasNftAvatar     int64
 	DefaultProfile   int64
 	DefaultImage     int64
@@ -173,7 +167,6 @@ type AddUserHistoryParams struct {
 
 func (q *Queries) AddUserHistory(ctx context.Context, arg AddUserHistoryParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, addUserHistory,
-		arg.CreationDate,
 		arg.UserID,
 		arg.Username,
 		arg.Name,
@@ -190,7 +183,6 @@ func (q *Queries) AddUserHistory(ctx context.Context, arg AddUserHistoryParams) 
 		arg.ExternalUrl,
 		arg.NumberOfTweets,
 		arg.Bot,
-		arg.Timestamp,
 		arg.HasNftAvatar,
 		arg.DefaultProfile,
 		arg.DefaultImage,
@@ -200,59 +192,24 @@ func (q *Queries) AddUserHistory(ctx context.Context, arg AddUserHistoryParams) 
 	return id, err
 }
 
-const deleteFollow = `-- name: DeleteFollow :exec
-DELETE FROM follow
-WHERE user_id = ? AND follower_id = ?
-`
-
-type DeleteFollowParams struct {
-	UserID     string
-	FollowerID string
-}
-
-func (q *Queries) DeleteFollow(ctx context.Context, arg DeleteFollowParams) error {
-	_, err := q.db.ExecContext(ctx, deleteFollow, arg.UserID, arg.FollowerID)
-	return err
-}
-
-const deleteTweet = `-- name: DeleteTweet :exec
-DELETE FROM tweets
-WHERE tweet_id = ?
-`
-
-func (q *Queries) DeleteTweet(ctx context.Context, tweetID string) error {
-	_, err := q.db.ExecContext(ctx, deleteTweet, tweetID)
-	return err
-}
-
-const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users
-WHERE user_id = ?
-`
-
-func (q *Queries) DeleteUser(ctx context.Context, userID string) error {
-	_, err := q.db.ExecContext(ctx, deleteUser, userID)
-	return err
-}
-
 const getFollowers = `-- name: GetFollowers :many
-SELECT follower_id FROM follow
+SELECT user_id, follower_id, row_created FROM follow
 WHERE user_id = ?
 `
 
-func (q *Queries) GetFollowers(ctx context.Context, userID string) ([]string, error) {
+func (q *Queries) GetFollowers(ctx context.Context, userID string) ([]Follow, error) {
 	rows, err := q.db.QueryContext(ctx, getFollowers, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []Follow
 	for rows.Next() {
-		var follower_id string
-		if err := rows.Scan(&follower_id); err != nil {
+		var i Follow
+		if err := rows.Scan(&i.UserID, &i.FollowerID, &i.RowCreated); err != nil {
 			return nil, err
 		}
-		items = append(items, follower_id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -264,23 +221,23 @@ func (q *Queries) GetFollowers(ctx context.Context, userID string) ([]string, er
 }
 
 const getFollowing = `-- name: GetFollowing :many
-SELECT user_id FROM follow
+SELECT user_id, follower_id, row_created FROM follow
 WHERE follower_id = ?
 `
 
-func (q *Queries) GetFollowing(ctx context.Context, followerID string) ([]string, error) {
+func (q *Queries) GetFollowing(ctx context.Context, followerID string) ([]Follow, error) {
 	rows, err := q.db.QueryContext(ctx, getFollowing, followerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	var items []Follow
 	for rows.Next() {
-		var user_id string
-		if err := rows.Scan(&user_id); err != nil {
+		var i Follow
+		if err := rows.Scan(&i.UserID, &i.FollowerID, &i.RowCreated); err != nil {
 			return nil, err
 		}
-		items = append(items, user_id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -291,30 +248,20 @@ func (q *Queries) GetFollowing(ctx context.Context, followerID string) ([]string
 	return items, nil
 }
 
-const getTweet = `-- name: GetTweet :one
-SELECT tweet_id, user_id FROM tweets
-WHERE tweet_id = ? LIMIT 1
+const getLatestTweetHistory = `-- name: GetLatestTweetHistory :one
+SELECT id, tweet_id, user_id, row_created, creation_date, text, language, favorite_count, retweet_count, reply_count, quote_count, retweet, views, timestamp, video_view_count, expanded_url, conversation_id FROM tweet_history
+WHERE tweet_id = ?
+ORDER BY timestamp DESC LIMIT 1
 `
 
-func (q *Queries) GetTweet(ctx context.Context, tweetID string) (Tweet, error) {
-	row := q.db.QueryRowContext(ctx, getTweet, tweetID)
-	var i Tweet
-	err := row.Scan(&i.TweetID, &i.UserID)
-	return i, err
-}
-
-const getTweetHistory = `-- name: GetTweetHistory :one
-SELECT id, tweet_id, user_id, creation_date, text, language, favorite_count, retweet_count, reply_count, quote_count, retweet, views, timestamp, video_view_count, expanded_url, conversation_id FROM tweet_history
-WHERE tweet_id = ? ORDER BY timestamp DESC LIMIT 1
-`
-
-func (q *Queries) GetTweetHistory(ctx context.Context, tweetID string) (TweetHistory, error) {
-	row := q.db.QueryRowContext(ctx, getTweetHistory, tweetID)
+func (q *Queries) GetLatestTweetHistory(ctx context.Context, tweetID string) (TweetHistory, error) {
+	row := q.db.QueryRowContext(ctx, getLatestTweetHistory, tweetID)
 	var i TweetHistory
 	err := row.Scan(
 		&i.ID,
 		&i.TweetID,
 		&i.UserID,
+		&i.RowCreated,
 		&i.CreationDate,
 		&i.Text,
 		&i.Language,
@@ -332,30 +279,19 @@ func (q *Queries) GetTweetHistory(ctx context.Context, tweetID string) (TweetHis
 	return i, err
 }
 
-const getUser = `-- name: GetUser :one
-SELECT user_id FROM users
-WHERE user_id = ? LIMIT 1
+const getLatestUserHistory = `-- name: GetLatestUserHistory :one
+SELECT id, user_id, row_created, username, name, follower_count, following_count, favourites_count, is_private, is_verified, is_blue_verified, location, profile_pic_url, profile_banner_url, description, external_url, number_of_tweets, bot, has_nft_avatar, default_profile, default_image FROM user_history
+WHERE user_id = ?
+ORDER BY row_created DESC LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, userID string) (string, error) {
-	row := q.db.QueryRowContext(ctx, getUser, userID)
-	var user_id string
-	err := row.Scan(&user_id)
-	return user_id, err
-}
-
-const getUserHistory = `-- name: GetUserHistory :one
-SELECT id, creation_date, user_id, username, name, follower_count, following_count, favourites_count, is_private, is_verified, is_blue_verified, location, profile_pic_url, profile_banner_url, description, external_url, number_of_tweets, bot, timestamp, has_nft_avatar, default_profile, default_image FROM user_history
-WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1
-`
-
-func (q *Queries) GetUserHistory(ctx context.Context, userID string) (UserHistory, error) {
-	row := q.db.QueryRowContext(ctx, getUserHistory, userID)
+func (q *Queries) GetLatestUserHistory(ctx context.Context, userID string) (UserHistory, error) {
+	row := q.db.QueryRowContext(ctx, getLatestUserHistory, userID)
 	var i UserHistory
 	err := row.Scan(
 		&i.ID,
-		&i.CreationDate,
 		&i.UserID,
+		&i.RowCreated,
 		&i.Username,
 		&i.Name,
 		&i.FollowerCount,
@@ -371,10 +307,54 @@ func (q *Queries) GetUserHistory(ctx context.Context, userID string) (UserHistor
 		&i.ExternalUrl,
 		&i.NumberOfTweets,
 		&i.Bot,
-		&i.Timestamp,
 		&i.HasNftAvatar,
 		&i.DefaultProfile,
 		&i.DefaultImage,
+	)
+	return i, err
+}
+
+const getTweets = `-- name: GetTweets :many
+SELECT tweet_id, user_id, row_created FROM tweets
+WHERE user_id = ?
+`
+
+func (q *Queries) GetTweets(ctx context.Context, userID string) ([]Tweet, error) {
+	rows, err := q.db.QueryContext(ctx, getTweets, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Tweet
+	for rows.Next() {
+		var i Tweet
+		if err := rows.Scan(&i.TweetID, &i.UserID, &i.RowCreated); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUser = `-- name: GetUser :one
+SELECT user_id, row_created, creation_date, timestamp FROM users
+WHERE user_id = ? LIMIT 1
+`
+
+func (q *Queries) GetUser(ctx context.Context, userID string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUser, userID)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.RowCreated,
+		&i.CreationDate,
+		&i.Timestamp,
 	)
 	return i, err
 }

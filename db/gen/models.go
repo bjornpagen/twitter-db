@@ -11,24 +11,27 @@ import (
 type Follow struct {
 	UserID     string
 	FollowerID string
-	Timestamp  int64
+	RowCreated int64
 }
 
 type MediaUrl struct {
-	ID      int64
-	TweetID string
-	Url     string
+	ID         int64
+	TweetID    string
+	RowCreated int64
+	Url        string
 }
 
 type Tweet struct {
-	TweetID string
-	UserID  string
+	TweetID    string
+	UserID     string
+	RowCreated int64
 }
 
 type TweetHistory struct {
 	ID             int64
 	TweetID        string
 	UserID         string
+	RowCreated     int64
 	CreationDate   string
 	Text           sql.NullString
 	Language       sql.NullString
@@ -45,13 +48,16 @@ type TweetHistory struct {
 }
 
 type User struct {
-	UserID string
+	UserID       string
+	RowCreated   int64
+	CreationDate string
+	Timestamp    int64
 }
 
 type UserHistory struct {
 	ID               int64
-	CreationDate     string
 	UserID           string
+	RowCreated       int64
 	Username         string
 	Name             string
 	FollowerCount    int64
@@ -67,7 +73,6 @@ type UserHistory struct {
 	ExternalUrl      string
 	NumberOfTweets   int64
 	Bot              int64
-	Timestamp        int64
 	HasNftAvatar     int64
 	DefaultProfile   int64
 	DefaultImage     int64
@@ -76,6 +81,7 @@ type UserHistory struct {
 type VideoUrl struct {
 	ID          int64
 	TweetID     string
+	RowCreated  int64
 	Bitrate     int64
 	ContentType string
 	Url         string

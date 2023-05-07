@@ -3,20 +3,16 @@ SELECT * FROM users
 WHERE user_id = ? LIMIT 1;
 
 -- name: AddUser :exec
-INSERT INTO users (user_id)
-VALUES (?);
+INSERT OR IGNORE INTO users (user_id, creation_date, timestamp)
+VALUES (?, ?, ?);
 
--- name: DeleteUser :exec
-DELETE FROM users
-WHERE user_id = ?;
-
--- name: GetUserHistory :one
+-- name: GetLatestUserHistory :one
 SELECT * FROM user_history
-WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1;
+WHERE user_id = ?
+ORDER BY row_created DESC LIMIT 1;
 
 -- name: AddUserHistory :one
 INSERT INTO user_history (
-	creation_date,
 	user_id,
 	username,
 	name,
@@ -33,57 +29,31 @@ INSERT INTO user_history (
 	external_url,
 	number_of_tweets,
 	bot,
-	timestamp,
 	has_nft_avatar,
 	default_profile,
 	default_image
-) VALUES (
-	?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-) RETURNING id;
-
--- name: GetFollowers :many
-SELECT follower_id FROM follow
-WHERE user_id = ?;
-
--- name: GetFollowing :many
-SELECT user_id FROM follow
-WHERE follower_id = ?;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id;
 
 -- name: AddFollow :exec
-INSERT INTO follow (
-	user_id,
-	follower_id,
-	timestamp
-) VALUES (
-	?, ?, ?
-);
-
--- name: DeleteFollow :exec
-DELETE FROM follow
-WHERE user_id = ? AND follower_id = ?;
-
--- name: GetTweet :one
-SELECT * FROM tweets
-WHERE tweet_id = ? LIMIT 1;
-
--- name: AddTweet :exec
-INSERT INTO tweets (tweet_id, user_id)
+INSERT OR REPLACE INTO follow (user_id, follower_id)
 VALUES (?, ?);
 
--- name: DeleteTweet :exec
-DELETE FROM tweets
-WHERE tweet_id = ?;
+-- name: AddTweet :exec
+INSERT OR IGNORE INTO tweets (tweet_id, user_id)
+VALUES (?, ?);
 
--- name: GetTweetHistory :one
+-- name: GetLatestTweetHistory :one
 SELECT * FROM tweet_history
-WHERE tweet_id = ? ORDER BY timestamp DESC LIMIT 1;
+WHERE tweet_id = ?
+ORDER BY timestamp DESC LIMIT 1;
 
 -- name: AddTweetHistory :one
 INSERT INTO tweet_history (
-	creation_date,
 	tweet_id,
-	text,
 	user_id,
+	creation_date,
+	text,
 	language,
 	favorite_count,
 	retweet_count,
@@ -95,6 +65,17 @@ INSERT INTO tweet_history (
 	video_view_count,
 	expanded_url,
 	conversation_id
-) VALUES (
-	?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-) RETURNING id;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id;
+
+-- name: GetFollowers :many
+SELECT * FROM follow
+WHERE user_id = ?;
+
+-- name: GetFollowing :many
+SELECT * FROM follow
+WHERE follower_id = ?;
+
+-- name: GetTweets :many
+SELECT * FROM tweets
+WHERE user_id = ?;

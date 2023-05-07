@@ -1,11 +1,16 @@
 CREATE TABLE users (
-	user_id TEXT PRIMARY KEY
+	user_id TEXT PRIMARY KEY,
+	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
+
+	creation_date TEXT NOT NULL,
+	timestamp INTEGER NOT NULL
 ) STRICT;
 
 CREATE TABLE user_history (
 	id INTEGER PRIMARY KEY,
-	creation_date TEXT NOT NULL,
 	user_id TEXT NOT NULL,
+	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
+
 	username TEXT NOT NULL,
 	name TEXT NOT NULL,
 	follower_count INTEGER NOT NULL,
@@ -21,7 +26,6 @@ CREATE TABLE user_history (
 	external_url TEXT NOT NULL,
 	number_of_tweets INTEGER NOT NULL,
 	bot INTEGER NOT NULL,
-	timestamp INTEGER NOT NULL,
 	has_nft_avatar INTEGER NOT NULL,
 	default_profile INTEGER NOT NULL,
 	default_image INTEGER NOT NULL,
@@ -29,11 +33,13 @@ CREATE TABLE user_history (
 ) STRICT;
 
 CREATE INDEX user_history_user_id_idx ON user_history(user_id);
+CREATE INDEX user_history_row_created_idx ON user_history(row_created);
 
 CREATE TABLE follow (
 	user_id TEXT NOT NULL,
 	follower_id TEXT NOT NULL,
-	timestamp INTEGER NOT NULL,
+	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
+
 	PRIMARY KEY (user_id, follower_id),
 	FOREIGN key(user_id) REFERENCES users(user_id),
 	FOREIGN key(follower_id) REFERENCES users(user_id)
@@ -42,6 +48,8 @@ CREATE TABLE follow (
 CREATE TABLE tweets (
 	tweet_id TEXT PRIMARY KEY,
 	user_id TEXT NOT NULL,
+	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
+
 	FOREIGN key (user_id) REFERENCES users(user_id)
 ) STRICT;
 
@@ -51,6 +59,8 @@ CREATE TABLE tweet_history (
 	id INTEGER PRIMARY KEY,
 	tweet_id TEXT NOT NULL,
 	user_id TEXT NOT NULL,
+	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
+
 	creation_date TEXT NOT NULL,
 	text TEXT,
 	language TEXT,
@@ -70,10 +80,13 @@ CREATE TABLE tweet_history (
 
 CREATE INDEX tweet_history_tweet_id_idx ON tweet_history(tweet_id);
 CREATE INDEX tweet_history_user_id_idx ON tweet_history(user_id);
+CREATE INDEX tweet_history_timestamp_idx ON tweet_history(timestamp);
 
 CREATE TABLE media_urls (
 	id INTEGER PRIMARY KEY,
 	tweet_id TEXT NOT NULL,
+	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
+
 	url TEXT NOT NULL,
 	FOREIGN KEY (tweet_id) REFERENCES tweet_history(tweet_id)
 ) STRICT;
@@ -83,6 +96,8 @@ CREATE INDEX media_urls_tweet_id_idx ON media_urls(tweet_id);
 CREATE TABLE video_urls (
 	id INTEGER PRIMARY KEY,
 	tweet_id TEXT NOT NULL,
+	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
+
 	bitrate INTEGER NOT NULL,
 	content_type TEXT NOT NULL,
 	url TEXT NOT NULL,

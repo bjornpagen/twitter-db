@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -8,6 +9,8 @@ import (
 	"github.com/JeremyLoy/config"
 	twitter "github.com/bjornpagen/rapidapi/twitter154"
 	"go.uber.org/ratelimit"
+
+	"github.com/bjornpagen/twitter-db/db"
 )
 
 type Config struct {
@@ -27,7 +30,7 @@ func validateConfig() {
 		unset = append(unset, "RAPIDAPI_KEY")
 	}
 	if c.DatabaseUrl == "" {
-		//unset = append(unset, "DATABASE_URL")
+		unset = append(unset, "DATABASE_URL")
 	}
 	if len(unset) > 0 {
 		log.Fatalf("missing required environment variables: %v", unset)
@@ -54,16 +57,52 @@ func run() error {
 		return fmt.Errorf("get user details: %w", err)
 	}
 
-	userId := user.UserId
-
-	tweets, err := tc.GetUserTweets(userId)
+	myDB, err := db.New(c.DatabaseUrl)
 	if err != nil {
-		return fmt.Errorf("get user tweets: %w", err)
+		return fmt.Errorf("database: %w", err)
 	}
 
-	for _, tweet := range tweets {
-		fmt.Printf("%+v\n", tweet)
+	ctx := context.Background()
+	if err = myDB.AddFullUser(ctx, toDBUser(user)); err != nil {
+		return fmt.Errorf("add user to database: %w", err)
 	}
 
 	return nil
+}
+
+type number interface {
+	float32 | float64 | int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64
+}
+
+func to[T number](n bool) T {
+	if n {
+		return 1
+	}
+	return 0
+}
+
+func toDBUser(u twitter.User) db.User {
+	return db.User{
+		UserID:           u.UserId,
+		CreationDate:     u.CreationDate,
+		Timestamp:        int64(u.Timestamp),
+		Username:         u.Username,
+		Name:             u.Name,
+		FollowerCount:    int64(u.FollowerCount),
+		FollowingCount:   int64(u.FollowingCount),
+		FavouritesCount:  int64(u.FavouritesCount),
+		IsPrivate:        to[int64](u.IsPrivate),
+		IsVerified:       to[int64](u.IsVerified),
+		IsBlueVerified:   to[int64](u.IsBlueVerified),
+		Location:         u.Location,
+		ProfilePicUrl:    u.ProfilePicUrl,
+		ProfileBannerUrl: u.ProfileBannerUrl,
+		Description:      u.Description,
+		ExternalUrl:      u.ExternalUrl,
+		NumberOfTweets:   int64(u.NumberOfTweets),
+		Bot:              to[int64](u.Bot),
+		HasNftAvatar:     to[int64](u.HasNftAvatar),
+		DefaultProfile:   to[int64](u.DefaultProfile),
+		DefaultImage:     to[int64](u.DefaultImage),
+	}
 }
