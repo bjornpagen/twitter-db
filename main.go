@@ -52,19 +52,28 @@ func run() error {
 		return fmt.Errorf("twitter client: %w", err)
 	}
 
-	user, err := tc.GetUserByUsername("bjornpagen")
-	if err != nil {
-		return fmt.Errorf("get user details: %w", err)
-	}
-
 	myDB, err := db.New(c.DatabaseUrl)
 	if err != nil {
 		return fmt.Errorf("database: %w", err)
 	}
 
+	_ = tc
+	_ = myDB
+
+	return nil
+}
+
+func fetchTweets(tc *twitter.Client, myDB *db.DB, userId string) error {
+	tweets, err := tc.GetUserTweets(userId, twitter.IncludePinned())
+	if err != nil {
+		return fmt.Errorf("get user tweets: %w", err)
+	}
+
 	ctx := context.Background()
-	if err = myDB.AddFullUser(ctx, toDBUser(user)); err != nil {
-		return fmt.Errorf("add user to database: %w", err)
+	for _, tweet := range tweets {
+		if _, err = myDB.AddFullTweet(ctx, toDBTweet(tweet, userId)); err != nil {
+			return fmt.Errorf("add user to db: %w", err)
+		}
 	}
 
 	return nil
@@ -105,4 +114,38 @@ func toDBUser(u twitter.User) db.User {
 		DefaultProfile:   to[int64](u.DefaultProfile),
 		DefaultImage:     to[int64](u.DefaultImage),
 	}
+}
+
+func toDBTweet(t twitter.Tweet, userId string) db.Tweet {
+	return db.Tweet{
+		TweetID:        t.TweetId,
+		UserID:         userId,
+		CreationDate:   t.CreationDate,
+		Text:           t.Text,
+		MediaUrl:       t.MediaUrl,
+		VideoUrl:       toDBVideoUrl(t.VideoUrl),
+		Language:       t.Language,
+		FavoriteCount:  int64(t.FavoriteCount),
+		RetweetCount:   int64(t.RetweetCount),
+		ReplyCount:     int64(t.ReplyCount),
+		QuoteCount:     int64(t.QuoteCount),
+		Retweet:        to[int64](t.Retweet),
+		Views:          int64(t.Views),
+		Timestamp:      int64(t.Timestamp),
+		VideoViewCount: int64(t.VideoViewCount),
+		ExpandedUrl:    t.ExpandedUrl,
+		ConversationID: t.ConversationId,
+	}
+}
+
+func toDBVideoUrl(vu []twitter.VideoUrl) []db.VideoUrl {
+	v := make([]db.VideoUrl, len(vu))
+	for i, url := range vu {
+		v[i] = db.VideoUrl{
+			Bitrate:     int64(url.Bitrate),
+			ContentType: url.ContentType,
+			Url:         url.Url,
+		}
+	}
+	return v
 }

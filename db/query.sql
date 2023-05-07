@@ -79,3 +79,11 @@ WHERE follower_id = ?;
 -- name: GetTweets :many
 SELECT * FROM tweets
 WHERE user_id = ?;
+
+-- name: AddMediaUrl :exec
+INSERT OR IGNORE INTO media_urls (tweet_history_id, url)
+VALUES (?, ?);
+
+-- name: AddVideoUrl :exec
+INSERT OR IGNORE INTO video_urls (tweet_history_id, bitrate, content_type, url)
+VALUES (?, ?, ?, ?);

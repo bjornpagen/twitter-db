@@ -4,9 +4,7 @@
 
 package gen
 
-import (
-	"database/sql"
-)
+import ()
 
 type Follow struct {
 	UserID     string
@@ -15,10 +13,9 @@ type Follow struct {
 }
 
 type MediaUrl struct {
-	ID         int64
-	TweetID    string
-	RowCreated int64
-	Url        string
+	TweetHistoryID int64
+	Url            string
+	RowCreated     int64
 }
 
 type Tweet struct {
@@ -33,18 +30,18 @@ type TweetHistory struct {
 	UserID         string
 	RowCreated     int64
 	CreationDate   string
-	Text           sql.NullString
-	Language       sql.NullString
-	FavoriteCount  sql.NullInt64
-	RetweetCount   sql.NullInt64
-	ReplyCount     sql.NullInt64
-	QuoteCount     sql.NullInt64
-	Retweet        sql.NullInt64
-	Views          sql.NullInt64
-	Timestamp      sql.NullInt64
-	VideoViewCount sql.NullInt64
-	ExpandedUrl    sql.NullString
-	ConversationID sql.NullString
+	Text           string
+	Language       string
+	FavoriteCount  int64
+	RetweetCount   int64
+	ReplyCount     int64
+	QuoteCount     int64
+	Retweet        int64
+	Views          int64
+	Timestamp      int64
+	VideoViewCount int64
+	ExpandedUrl    string
+	ConversationID string
 }
 
 type User struct {
@@ -79,10 +76,9 @@ type UserHistory struct {
 }
 
 type VideoUrl struct {
-	ID          int64
-	TweetID     string
-	RowCreated  int64
-	Bitrate     int64
-	ContentType string
-	Url         string
+	TweetHistoryID int64
+	Url            string
+	RowCreated     int64
+	Bitrate        int64
+	ContentType    string
 }

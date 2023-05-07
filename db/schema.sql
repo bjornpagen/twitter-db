@@ -16,19 +16,19 @@ CREATE TABLE user_history (
 	follower_count INTEGER NOT NULL,
 	following_count INTEGER NOT NULL,
 	favourites_count INTEGER NOT NULL,
-	is_private INTEGER NOT NULL,
-	is_verified INTEGER NOT NULL,
-	is_blue_verified INTEGER NOT NULL,
+	is_private INTEGER NOT NULL CHECK(is_private IN (0, 1)),
+	is_verified INTEGER NOT NULL CHECK(is_private IN (0, 1)),
+	is_blue_verified INTEGER NOT NULL CHECK(is_private IN (0, 1)),
 	location TEXT NOT NULL,
 	profile_pic_url TEXT NOT NULL,
 	profile_banner_url TEXT NOT NULL,
 	description TEXT NOT NULL,
 	external_url TEXT NOT NULL,
 	number_of_tweets INTEGER NOT NULL,
-	bot INTEGER NOT NULL,
-	has_nft_avatar INTEGER NOT NULL,
-	default_profile INTEGER NOT NULL,
-	default_image INTEGER NOT NULL,
+	bot INTEGER NOT NULL CHECK(is_private IN (0, 1)),
+	has_nft_avatar INTEGER NOT NULL CHECK(is_private IN (0, 1)),
+	default_profile INTEGER NOT NULL CHECK(is_private IN (0, 1)),
+	default_image INTEGER NOT NULL CHECK(is_private IN (0, 1)),
 	FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) STRICT;
 
@@ -62,18 +62,18 @@ CREATE TABLE tweet_history (
 	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
 
 	creation_date TEXT NOT NULL,
-	text TEXT,
-	language TEXT,
-	favorite_count INTEGER,
-	retweet_count INTEGER,
-	reply_count INTEGER,
-	quote_count INTEGER,
-	retweet INTEGER,
-	views INTEGER,
-	timestamp INTEGER,
-	video_view_count INTEGER,
-	expanded_url TEXT,
-	conversation_id TEXT,
+	text TEXT NOT NULL,
+	language TEXT NOT NULL,
+	favorite_count INTEGER NOT NULL,
+	retweet_count INTEGER NOT NULL,
+	reply_count INTEGER NOT NULL,
+	quote_count INTEGER NOT NULL,
+	retweet INTEGER NOT NULL CHECK(is_private IN (0, 1)),
+	views INTEGER NOT NULL,
+	timestamp INTEGER NOT NULL,
+	video_view_count INTEGER NOT NULL,
+	expanded_url TEXT NOT NULL,
+	conversation_id TEXT NOT NULL,
 	FOREIGN KEY (tweet_id) REFERENCES tweets(tweet_id),
 	FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) STRICT;
@@ -83,25 +83,21 @@ CREATE INDEX tweet_history_user_id_idx ON tweet_history(user_id);
 CREATE INDEX tweet_history_timestamp_idx ON tweet_history(timestamp);
 
 CREATE TABLE media_urls (
-	id INTEGER PRIMARY KEY,
-	tweet_id TEXT NOT NULL,
+	tweet_history_id INTEGER NOT NULL,
+	url TEXT NOT NULL,
 	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
 
-	url TEXT NOT NULL,
-	FOREIGN KEY (tweet_id) REFERENCES tweet_history(tweet_id)
+	PRIMARY KEY (tweet_history_id, url),
+	FOREIGN KEY (tweet_history_id) REFERENCES tweet_history(id)
 ) STRICT;
 
-CREATE INDEX media_urls_tweet_id_idx ON media_urls(tweet_id);
-
 CREATE TABLE video_urls (
-	id INTEGER PRIMARY KEY,
-	tweet_id TEXT NOT NULL,
+	tweet_history_id INTEGER NOT NULL,
+	url TEXT NOT NULL,
 	row_created INTEGER NOT NULL DEFAULT (unixepoch('now')),
 
 	bitrate INTEGER NOT NULL,
 	content_type TEXT NOT NULL,
-	url TEXT NOT NULL,
-	FOREIGN KEY (tweet_id) REFERENCES tweet_history(tweet_id)
+	PRIMARY KEY (tweet_history_id, url),
+	FOREIGN KEY (tweet_history_id) REFERENCES tweet_history(id)
 ) STRICT;
-
-CREATE INDEX video_urls_tweet_id_idx ON video_urls(tweet_id);

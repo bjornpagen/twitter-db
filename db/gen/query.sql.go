@@ -7,7 +7,6 @@ package gen
 
 import (
 	"context"
-	"database/sql"
 )
 
 const addFollow = `-- name: AddFollow :exec
@@ -22,6 +21,21 @@ type AddFollowParams struct {
 
 func (q *Queries) AddFollow(ctx context.Context, arg AddFollowParams) error {
 	_, err := q.db.ExecContext(ctx, addFollow, arg.UserID, arg.FollowerID)
+	return err
+}
+
+const addMediaUrl = `-- name: AddMediaUrl :exec
+INSERT OR IGNORE INTO media_urls (tweet_history_id, url)
+VALUES (?, ?)
+`
+
+type AddMediaUrlParams struct {
+	TweetHistoryID int64
+	Url            string
+}
+
+func (q *Queries) AddMediaUrl(ctx context.Context, arg AddMediaUrlParams) error {
+	_, err := q.db.ExecContext(ctx, addMediaUrl, arg.TweetHistoryID, arg.Url)
 	return err
 }
 
@@ -65,18 +79,18 @@ type AddTweetHistoryParams struct {
 	TweetID        string
 	UserID         string
 	CreationDate   string
-	Text           sql.NullString
-	Language       sql.NullString
-	FavoriteCount  sql.NullInt64
-	RetweetCount   sql.NullInt64
-	ReplyCount     sql.NullInt64
-	QuoteCount     sql.NullInt64
-	Retweet        sql.NullInt64
-	Views          sql.NullInt64
-	Timestamp      sql.NullInt64
-	VideoViewCount sql.NullInt64
-	ExpandedUrl    sql.NullString
-	ConversationID sql.NullString
+	Text           string
+	Language       string
+	FavoriteCount  int64
+	RetweetCount   int64
+	ReplyCount     int64
+	QuoteCount     int64
+	Retweet        int64
+	Views          int64
+	Timestamp      int64
+	VideoViewCount int64
+	ExpandedUrl    string
+	ConversationID string
 }
 
 func (q *Queries) AddTweetHistory(ctx context.Context, arg AddTweetHistoryParams) (int64, error) {
@@ -190,6 +204,28 @@ func (q *Queries) AddUserHistory(ctx context.Context, arg AddUserHistoryParams) 
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const addVideoUrl = `-- name: AddVideoUrl :exec
+INSERT OR IGNORE INTO video_urls (tweet_history_id, bitrate, content_type, url)
+VALUES (?, ?, ?, ?)
+`
+
+type AddVideoUrlParams struct {
+	TweetHistoryID int64
+	Bitrate        int64
+	ContentType    string
+	Url            string
+}
+
+func (q *Queries) AddVideoUrl(ctx context.Context, arg AddVideoUrlParams) error {
+	_, err := q.db.ExecContext(ctx, addVideoUrl,
+		arg.TweetHistoryID,
+		arg.Bitrate,
+		arg.ContentType,
+		arg.Url,
+	)
+	return err
 }
 
 const getFollowers = `-- name: GetFollowers :many
