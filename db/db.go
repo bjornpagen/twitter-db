@@ -53,10 +53,10 @@ func New(dbUrl string) (DB, error) {
 	}, nil
 }
 
-func (db *DB) AddFullUser(ctx context.Context, u User) error {
+func (db *DB) AddFullUser(ctx context.Context, u User) (userHistoryId int64, err error) {
 	tx, err := db.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return 0, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -66,7 +66,7 @@ func (db *DB) AddFullUser(ctx context.Context, u User) error {
 		Timestamp:    u.Timestamp,
 	}
 	if err := db.AddUser(ctx, addUserParams); err != nil {
-		return fmt.Errorf("add user: %w", err)
+		return 0, fmt.Errorf("add user: %w", err)
 	}
 
 	addUserHistoryParams := gen.AddUserHistoryParams{
@@ -90,13 +90,13 @@ func (db *DB) AddFullUser(ctx context.Context, u User) error {
 		DefaultProfile:   u.DefaultProfile,
 		DefaultImage:     u.DefaultImage,
 	}
-	if _, err := db.AddUserHistory(ctx, addUserHistoryParams); err != nil {
-		return fmt.Errorf("add user history: %w", err)
+	if userHistoryId, err = db.AddUserHistory(ctx, addUserHistoryParams); err != nil {
+		return 0, fmt.Errorf("add user history: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
+		return 0, fmt.Errorf("commit transaction: %w", err)
 	}
 
-	return nil
+	return userHistoryId, nil
 }
