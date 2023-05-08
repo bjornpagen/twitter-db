@@ -68,16 +68,16 @@ INSERT INTO tweet_history (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id;
 
--- name: GetFollowers :many
-SELECT * FROM follow
+-- name: GetFollowerIDs :many
+SELECT follower_id FROM follow
 WHERE user_id = ?;
 
--- name: GetFollowing :many
-SELECT * FROM follow
+-- name: GetFollowingIDs :many
+SELECT user_id FROM follow
 WHERE follower_id = ?;
 
--- name: GetTweets :many
-SELECT * FROM tweets
+-- name: GetTweetIDs :many
+SELECT tweet_id FROM tweets
 WHERE user_id = ?;
 
 -- name: AddMediaUrl :exec
@@ -87,3 +87,27 @@ VALUES (?, ?);
 -- name: AddVideoUrl :exec
 INSERT OR IGNORE INTO video_urls (tweet_history_id, bitrate, content_type, url)
 VALUES (?, ?, ?, ?);
+
+-- name: AddFavorite :exec
+INSERT OR IGNORE INTO favorite (user_id, tweet_id)
+VALUES (?, ?);
+
+-- name: AddRetweet :exec
+INSERT OR IGNORE INTO retweet (user_id, tweet_id)
+VALUES (?, ?);
+
+-- name: GetFavoriteUserIDs :many
+SELECT user_id FROM favorite
+WHERE tweet_id = ?;
+
+-- name: GetFavoriteTweetIDs :many
+SELECT tweet_id FROM favorite
+WHERE user_id = ?;
+
+-- name: GetRetweetUserIDs :many
+SELECT user_id FROM retweet
+WHERE tweet_id = ?;
+
+-- name: GetRetweetTweetIDs :many
+SELECT tweet_id FROM retweet
+WHERE user_id = ?;

@@ -11,6 +11,7 @@ import (
 	"go.uber.org/ratelimit"
 
 	"github.com/bjornpagen/twitter-db/db"
+	"github.com/bjornpagen/twitter-db/db/gen"
 )
 
 type Config struct {
@@ -57,8 +58,48 @@ func run() error {
 		return fmt.Errorf("database: %w", err)
 	}
 
-	_ = tc
-	_ = myDB
+	user, err := tc.GetUserByUsername("redacted")
+	if err != nil {
+		return fmt.Errorf("get user: %w", err)
+	}
+
+	// add user to db
+	if _, err = myDB.AddFullUser(context.Background(), toDBUser(user)); err != nil {
+		return fmt.Errorf("add user to db: %w", err)
+	}
+
+	err = fetchTweets(&tc, &myDB, user.UserId)
+	if err != nil {
+		return fmt.Errorf("fetch tweets: %w", err)
+	}
+
+	ids, err := myDB.GetTweetIDs(context.Background(), user.UserId)
+	if err != nil {
+		return fmt.Errorf("get tweets: %w", err)
+	}
+
+	for _, id := range ids {
+		// fetch likers of Tweet
+		users, err := tc.GetTweetUserFavorites(id)
+		if err != nil {
+			return fmt.Errorf("get tweet user favorites: %w", err)
+		}
+
+		// add likers to db
+		ctx := context.Background()
+		for _, user := range users {
+			if _, err = myDB.AddFullUser(ctx, toDBUser(user)); err != nil {
+				return fmt.Errorf("add user to db: %w", err)
+			}
+
+			if err = myDB.AddFavorite(ctx, gen.AddFavoriteParams{
+				UserID:  user.UserId,
+				TweetID: id,
+			}); err != nil {
+				return fmt.Errorf("add user favorite: %w", err)
+			}
+		}
+	}
 
 	return nil
 }
@@ -149,3 +190,29 @@ func toDBVideoUrl(vu []twitter.VideoUrl) []db.VideoUrl {
 	}
 	return v
 }
+
+/*
+users, err := tc.GetTweetUserFavorites("1639998740462223363")
+	if err != nil {
+		return fmt.Errorf("get tweet user favorites: %w", err)
+	}
+
+	spew.Dump(users)
+
+	os.Exit(0)
+
+	// add likers to db
+	ctx := context.Background()
+	for _, user := range users {
+		if _, err = myDB.AddFullUser(ctx, toDBUser(user)); err != nil {
+			return fmt.Errorf("add user to db: %w", err)
+		}
+
+		if err = myDB.AddFavorite(ctx, gen.AddFavoriteParams{
+			UserID:  user.UserId,
+			TweetID: "1639998740462223363",
+		}); err != nil {
+			return fmt.Errorf("add user favorite: %w", err)
+		}
+	}
+*/

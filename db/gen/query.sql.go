@@ -9,6 +9,21 @@ import (
 	"context"
 )
 
+const addFavorite = `-- name: AddFavorite :exec
+INSERT OR IGNORE INTO favorite (user_id, tweet_id)
+VALUES (?, ?)
+`
+
+type AddFavoriteParams struct {
+	UserID  string
+	TweetID string
+}
+
+func (q *Queries) AddFavorite(ctx context.Context, arg AddFavoriteParams) error {
+	_, err := q.db.ExecContext(ctx, addFavorite, arg.UserID, arg.TweetID)
+	return err
+}
+
 const addFollow = `-- name: AddFollow :exec
 INSERT OR REPLACE INTO follow (user_id, follower_id)
 VALUES (?, ?)
@@ -36,6 +51,21 @@ type AddMediaUrlParams struct {
 
 func (q *Queries) AddMediaUrl(ctx context.Context, arg AddMediaUrlParams) error {
 	_, err := q.db.ExecContext(ctx, addMediaUrl, arg.TweetHistoryID, arg.Url)
+	return err
+}
+
+const addRetweet = `-- name: AddRetweet :exec
+INSERT OR IGNORE INTO retweet (user_id, tweet_id)
+VALUES (?, ?)
+`
+
+type AddRetweetParams struct {
+	UserID  string
+	TweetID string
+}
+
+func (q *Queries) AddRetweet(ctx context.Context, arg AddRetweetParams) error {
+	_, err := q.db.ExecContext(ctx, addRetweet, arg.UserID, arg.TweetID)
 	return err
 }
 
@@ -228,24 +258,24 @@ func (q *Queries) AddVideoUrl(ctx context.Context, arg AddVideoUrlParams) error 
 	return err
 }
 
-const getFollowers = `-- name: GetFollowers :many
-SELECT user_id, follower_id, row_created FROM follow
+const getFavoriteTweetIDs = `-- name: GetFavoriteTweetIDs :many
+SELECT tweet_id FROM favorite
 WHERE user_id = ?
 `
 
-func (q *Queries) GetFollowers(ctx context.Context, userID string) ([]Follow, error) {
-	rows, err := q.db.QueryContext(ctx, getFollowers, userID)
+func (q *Queries) GetFavoriteTweetIDs(ctx context.Context, userID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getFavoriteTweetIDs, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Follow
+	var items []string
 	for rows.Next() {
-		var i Follow
-		if err := rows.Scan(&i.UserID, &i.FollowerID, &i.RowCreated); err != nil {
+		var tweet_id string
+		if err := rows.Scan(&tweet_id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, tweet_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -256,24 +286,80 @@ func (q *Queries) GetFollowers(ctx context.Context, userID string) ([]Follow, er
 	return items, nil
 }
 
-const getFollowing = `-- name: GetFollowing :many
-SELECT user_id, follower_id, row_created FROM follow
-WHERE follower_id = ?
+const getFavoriteUserIDs = `-- name: GetFavoriteUserIDs :many
+SELECT user_id FROM favorite
+WHERE tweet_id = ?
 `
 
-func (q *Queries) GetFollowing(ctx context.Context, followerID string) ([]Follow, error) {
-	rows, err := q.db.QueryContext(ctx, getFollowing, followerID)
+func (q *Queries) GetFavoriteUserIDs(ctx context.Context, tweetID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getFavoriteUserIDs, tweetID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Follow
+	var items []string
 	for rows.Next() {
-		var i Follow
-		if err := rows.Scan(&i.UserID, &i.FollowerID, &i.RowCreated); err != nil {
+		var user_id string
+		if err := rows.Scan(&user_id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, user_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFollowerIDs = `-- name: GetFollowerIDs :many
+SELECT follower_id FROM follow
+WHERE user_id = ?
+`
+
+func (q *Queries) GetFollowerIDs(ctx context.Context, userID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getFollowerIDs, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var follower_id string
+		if err := rows.Scan(&follower_id); err != nil {
+			return nil, err
+		}
+		items = append(items, follower_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFollowingIDs = `-- name: GetFollowingIDs :many
+SELECT user_id FROM follow
+WHERE follower_id = ?
+`
+
+func (q *Queries) GetFollowingIDs(ctx context.Context, followerID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getFollowingIDs, followerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var user_id string
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -350,24 +436,80 @@ func (q *Queries) GetLatestUserHistory(ctx context.Context, userID string) (User
 	return i, err
 }
 
-const getTweets = `-- name: GetTweets :many
-SELECT tweet_id, user_id, row_created FROM tweets
+const getRetweetTweetIDs = `-- name: GetRetweetTweetIDs :many
+SELECT tweet_id FROM retweet
 WHERE user_id = ?
 `
 
-func (q *Queries) GetTweets(ctx context.Context, userID string) ([]Tweet, error) {
-	rows, err := q.db.QueryContext(ctx, getTweets, userID)
+func (q *Queries) GetRetweetTweetIDs(ctx context.Context, userID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getRetweetTweetIDs, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Tweet
+	var items []string
 	for rows.Next() {
-		var i Tweet
-		if err := rows.Scan(&i.TweetID, &i.UserID, &i.RowCreated); err != nil {
+		var tweet_id string
+		if err := rows.Scan(&tweet_id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, tweet_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRetweetUserIDs = `-- name: GetRetweetUserIDs :many
+SELECT user_id FROM retweet
+WHERE tweet_id = ?
+`
+
+func (q *Queries) GetRetweetUserIDs(ctx context.Context, tweetID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getRetweetUserIDs, tweetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var user_id string
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTweetIDs = `-- name: GetTweetIDs :many
+SELECT tweet_id FROM tweets
+WHERE user_id = ?
+`
+
+func (q *Queries) GetTweetIDs(ctx context.Context, userID string) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getTweetIDs, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var tweet_id string
+		if err := rows.Scan(&tweet_id); err != nil {
+			return nil, err
+		}
+		items = append(items, tweet_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

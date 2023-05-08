@@ -6,6 +6,12 @@ package gen
 
 import ()
 
+type Favorite struct {
+	UserID     string
+	TweetID    string
+	RowCreated int64
+}
+
 type Follow struct {
 	UserID     string
 	FollowerID string
@@ -16,6 +22,12 @@ type MediaUrl struct {
 	TweetHistoryID int64
 	Url            string
 	RowCreated     int64
+}
+
+type Retweet struct {
+	UserID     string
+	TweetID    string
+	RowCreated int64
 }
 
 type Tweet struct {
