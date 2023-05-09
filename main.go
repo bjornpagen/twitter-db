@@ -190,29 +190,3 @@ func toDBVideoUrl(vu []twitter.VideoUrl) []db.VideoUrl {
 	}
 	return v
 }
-
-/*
-users, err := tc.GetTweetUserFavorites("1639998740462223363")
-	if err != nil {
-		return fmt.Errorf("get tweet user favorites: %w", err)
-	}
-
-	spew.Dump(users)
-
-	os.Exit(0)
-
-	// add likers to db
-	ctx := context.Background()
-	for _, user := range users {
-		if _, err = myDB.AddFullUser(ctx, toDBUser(user)); err != nil {
-			return fmt.Errorf("add user to db: %w", err)
-		}
-
-		if err = myDB.AddFavorite(ctx, gen.AddFavoriteParams{
-			UserID:  user.UserId,
-			TweetID: "1639998740462223363",
-		}); err != nil {
-			return fmt.Errorf("add user favorite: %w", err)
-		}
-	}
-*/
